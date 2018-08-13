@@ -5,11 +5,11 @@
 #export STRING_DATADISK=storageProfile.dataDisks[*].[name,managedDisk.id]
 export STRING_OSDISK=storageProfile.osDisk.managedDisk.id
 export STRING_DATADISK=storageProfile.dataDisks[*].managedDisk.id
+export SUFIX=$(date +"%Y%m%d%H%M%S")
 #Resource Group
 export RG=
 export VMNAME=
 export NEWVMNAME=
-export SUFIX=$(date +"%Y%m%d%H%M%S")
 #Region
 export REGION=
 ##Region List
@@ -75,68 +75,100 @@ function LISTDISK() {
 }
 
 function CREATESNAPSHOT() {
-  BANNER titulo "Creating snapshots for $(wc -l $1 | awk '{print $1}') disks"
-  while read  diskid
-  do
-    name=$(echo $diskid | tr '/' '\n' | tail -n 1)
-    BANNER conteudo "Creating snapshot for disk $diskid"
-    echo az snapshot create \
-      -n $VMNAME-so-$SUFIX \
-      -g $RG \
-      --sku Standard_LRS \
-      --source $diskid
-    rc=$? 2>/dev/null
-    if [ $rc -ne 0 ]
-    then
-      EXITNOW "Could not create snapshot for disk $diskid"
-    else
-      BANNER sucesso "Snapshot command successful"
-    fi
-  done < $1
+	export NDATADISK=$(wc -l $1 | awk '{print $1}')
+	if [ $NDATADISK -ne 0 ]
+	then
+		BANNER titulo "Creating snapshots for $(wc -l $1 | awk '{print $1}') disks"
+	  while read  diskid
+	  do
+	    name=$(echo $diskid | tr '/' '\n' | tail -n 1)
+	    BANNER conteudo "Creating snapshot for disk $diskid"
+	    echo az snapshot create \
+	      -n $VMNAME-so-$SUFIX \
+	      -g $RG \
+	      --sku Standard_LRS \
+	      --source $diskid
+	    rc=$? 2>/dev/null
+	    if [ $rc -ne 0 ]
+	    then
+	      EXITNOW "Could not create snapshot for disk $diskid"
+	    else
+	      BANNER sucesso "Snapshot command successful"
+	    fi
+	  done < $1
+	fi
+
 }
 
 function CREATEDISK() {
-  BANNER titulo "Creating $(wc -l $2  | awk '{print $1}') disks for $1"
-  cat -n $2 | \
-  while read serial snapshot
-  do
-    BANNER conteudo "Creating disk $1-$serial from snapshot $snapshot"
-    az disk create \
-      --name $1-$serial \
-      --resource-group $RG \
-      --location $REGION \
-      --sku Standard_LRS \
-      --source $snapshot
-    rc=$? 2>/dev/null
-    if [ $rc -ne 0 ]
-    then
-      EXITNOW "could not create disk for $1-$serial from snapshot $snapshot"
-    else
-      BANNER sucesso "Disk commando successful"
-    fi
-  done
+	export NDATADISK=$(wc -l $2 | awk '{print $1}')
+	if [ $NDATADISK -ne 0 ]
+	then
+		BANNER titulo "Creating $(wc -l $2  | awk '{print $1}') disks for $1"
+	  cat -n $2 | \
+	  while read serial snapshot
+	  do
+	    BANNER conteudo "Creating disk $1-$serial from snapshot $snapshot"
+	    az disk create \
+	      --name $1-$serial \
+	      --resource-group $RG \
+	      --location $REGION \
+	      --sku Standard_LRS \
+	      --source $snapshot
+	    rc=$? 2>/dev/null
+	    if [ $rc -ne 0 ]
+	    then
+	      EXITNOW "could not create disk for $1-$serial from snapshot $snapshot"
+	    else
+	      BANNER sucesso "Disk commando successful"
+	    fi
+	  done
+	fi
 
 
 }
 function CREATEVM() {
-  BANNER titulo "Creating Virtual Machine $NEWVMNAME"
-  az vm create \
-  --name $NEWVMNAME \
-  --resource-group $RG \
-  --attach-os-disk $NEWVMNAME-os-1 \
-  --attach-data-disks $(seq 1 $(wc -l $2 | awk '{print $1}')|xargs -i echo $NEWVMNAME-{}) \
-  --subnet $(GETVMDETAIL subnet) \
-  --public-ip-address "" \
-  --location $REGION \
-  --os-type linux \
-  --size $(GETVMDETAIL size)
-  rc=$? 2>/dev/null
-  if [ $rc -ne 0 ]
-  then
-    EXITNOW "could not create vm $NEWVMNAME"
-  else
-    BANNER sucesso "Virtual Machine command successful"
-  fi
+	export NDATADISK=$(wc -l $2 | awk '{print $1}')
+	if [ $NDATADISK -eq 0 ]
+	then
+		BANNER titulo "Creating Virtual Machine $NEWVMNAME"
+	  az vm create \
+	  --name $NEWVMNAME \
+	  --resource-group $RG \
+	  --attach-os-disk $NEWVMNAME-os-1 \
+	  --subnet $(GETVMDETAIL subnet) \
+	  --public-ip-address "" \
+	  --location $REGION \
+	  --os-type linux \
+	  --size $(GETVMDETAIL size)
+	  rc=$? 2>/dev/null
+	  if [ $rc -ne 0 ]
+	  then
+	    EXITNOW "could not create vm $NEWVMNAME"
+	  else
+	    BANNER sucesso "Virtual Machine command successful"
+	  fi
+	else
+		BANNER titulo "Creating Virtual Machine $NEWVMNAME"
+	  az vm create \
+	  --name $NEWVMNAME \
+	  --resource-group $RG \
+	  --attach-os-disk $NEWVMNAME-os-1 \
+	  --attach-data-disks $(seq 1 $(wc -l $2 | awk '{print $1}')|xargs -i echo $NEWVMNAME-{}) \
+	  --subnet $(GETVMDETAIL subnet) \
+	  --public-ip-address "" \
+	  --location $REGION \
+	  --os-type linux \
+	  --size $(GETVMDETAIL size)
+	  rc=$? 2>/dev/null
+	  if [ $rc -ne 0 ]
+	  then
+	    EXITNOW "could not create vm $NEWVMNAME"
+	  else
+	    BANNER sucesso "Virtual Machine command successful"
+	  fi
+	fi
+
 }
 function DELETESNAPSHOT() {
   echo dummy
