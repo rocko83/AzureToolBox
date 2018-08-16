@@ -14,7 +14,7 @@ export NEWVMNAME=
 #Availability Set, Para não usar comente ou deixe em branco a variável
 export AVSET=
 #Region
-export REGION=eastus2
+export REGION=
 ##Region List
 #['East Asia', 'eastasia']
 #['Southeast Asia', 'southeastasia']
