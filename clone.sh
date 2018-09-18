@@ -132,9 +132,9 @@ function CREATEDISK() {
 }
 function CREATEVM() {
 	export NDATADISK=$(wc -l $2 | awk '{print $1}')
-	if [ $NDATADISK -eq 0 ]
+	if [ $NDATADISK -ne 0 ]
 	then
-		export DATADISKCREATION=$(seq 1 $(wc -l $2 | awk '{print $1}')|xargs -i echo $NEWVMNAME-{})
+		export DATADISKCREATION=" --attach-data-disks $(seq 1 $(wc -l $2 | awk '{print $1}')|xargs -i echo $NEWVMNAME-{})"
 	fi
 	export NAVSET=$(echo $AVSET | wc -m)
 	if [ $NAVSET -ne 1 ]
