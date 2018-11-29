@@ -5,7 +5,6 @@
 #export STRING_DATADISK=storageProfile.dataDisks[*].[name,managedDisk.id]
 export STRING_OSDISK=storageProfile.osDisk.managedDisk.id
 export STRING_DATADISK=storageProfile.dataDisks[*].managedDisk.id
-
 export SUFIX=$(date +"%Y%m%d%H%M%S")
 #Resource Group
 export RG=
@@ -13,39 +12,6 @@ export VMNAME=
 export NEWVMNAME=
 #Availability Set, Para não usar comente ou deixe em branco a variável
 export AVSET=
-#Region
-export REGION=
-##Region List
-#['East Asia', 'eastasia']
-#['Southeast Asia', 'southeastasia']
-#['Central US', 'centralus']
-#['East US', 'eastus']
-#['East US 2', 'eastus2']
-#['West US', 'westus']
-#['North Central US', 'northcentralus']
-#['South Central US', 'southcentralus']
-#['North Europe', 'northeurope']
-#['West Europe', 'westeurope']
-#['Japan West', 'japanwest']
-#['Japan East', 'japaneast']
-#['Brazil South', 'brazilsouth']
-#['Australia East', 'australiaeast']
-#['Australia Southeast', 'australiasoutheast']
-#['South India', 'southindia']
-#['Central India', 'centralindia']
-#['West India', 'westindia']
-#['Canada Central', 'canadacentral']
-#['Canada East', 'canadaeast']
-#['UK South', 'uksouth']
-#['UK West', 'ukwest']
-#['West Central US', 'westcentralus']
-#['West US 2', 'westus2']
-#['Korea Central', 'koreacentral']
-#['Korea South', 'koreasouth']
-
-
-
-
 function TEMPFILE() {
 	case $1 in
 	criar)
@@ -59,7 +25,12 @@ function TEMPFILE() {
 		;;
 	esac
 }
-
+function GETREGION() {
+	# BANNER titulo "Getting region for $1"
+	az vm list \
+	--query "[?name=='$1'].[location]" \
+	-o tsv
+}
 function LISTDISK() {
   BANNER titulo "List Disks for $VMNAME with string $1"
   az vm show \
@@ -194,6 +165,18 @@ function GETVMDETAIL() {
     esac
 
 }
+function STOPVM() {
+	BANNER titulo "Stopping Virtual Machine $2"
+	sleep 15
+	az vm stop -n $2 -g $1
+	rc=$? 2>/dev/null
+	if [ $rc -ne 0 ]
+	then
+		EXITNOW "could not stop vm $2"
+	else
+		BANNER sucesso "Virtual Machine STOP successful"
+	fi
+}
 function BANNER() {
   case $1 in
     titulo)
@@ -215,6 +198,7 @@ function BANNER() {
         echo -e "\e[41m"
         echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
         echo -en "\e[0m"
+				exit 1
         ;;
     *)
         EXITNOW
@@ -227,6 +211,9 @@ function EXITNOW() {
   exit 1
 }
 clear
+date
+export REGION=$(GETREGION $VMNAME)
+
 if [ "$RG" == "" ]
 then
   EXITNOW "Variable RG is empty"
@@ -243,6 +230,8 @@ if [ "$REGION" == "" ]
 then
   EXITNOW "Variable REGION is empty"
 fi
+# echo $REGION
+# exit 1
 #Create OS Disk
 OSDISK=$(TEMPFILE criar)
 LISTDISK $STRING_OSDISK  $OSDISK
@@ -257,3 +246,4 @@ CREATEVM $OSDISK $DATADISK
 #Apagar arquivos temporarios
 TEMPFILE apagar $OSDISK
 TEMPFILE apagar $DATADISK
+STOPVM $RG $NEWVMNAME
