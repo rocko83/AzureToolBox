@@ -168,7 +168,7 @@ function GETVMDETAIL() {
 function STOPVM() {
 	BANNER titulo "Stopping Virtual Machine $2"
 	sleep 15
-	az vm stop -n $2 -g $1
+	az vm deallocate -n $2 -g $1
 	rc=$? 2>/dev/null
 	if [ $rc -ne 0 ]
 	then
