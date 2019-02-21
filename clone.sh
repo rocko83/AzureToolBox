@@ -1,17 +1,57 @@
 #!/bin/bash
+function BANNER() {
+  case $1 in
+    titulo)
+        echo -e "\e[45m"
+        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
+        echo -en "\e[0m"
+        ;;
+    conteudo)
+        echo -e "\e[44m"
+        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
+        echo -en "\e[0m"
+        ;;
+    sucesso)
+        echo -e "\e[42m"
+        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
+      	echo -en "\e[0m"
+        ;;
+    erro)
+        echo -e "\e[41m"
+        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
+        echo -en "\e[0m"
+				exit 1
+        ;;
+    *)
+        EXITNOW
+        ;;
+  esac
+
+}
+export STRING_OSDISK=storageProfile.osDisk.managedDisk.id
+export STRING_DATADISK=storageProfile.dataDisks[*].managedDisk.id
+export SUFIX=$(date +"%Y%m%d%H%M%S")
+if [ $# -ge 3 ]
+then
+	#Resource Group
+	export RG=$1
+	export VMNAME=$2
+	export NEWVMNAME=$3
+	#Availability Set, Para não usar comente ou deixe em branco a variável
+	export AVSET=$4
+
+else
+	BANNER conteudo "$0 <RG NAME> <VM NAME> <NEW VM NAME> <AV SET NAME>(optional)"
+	BANNER erro "Not enought arguments"
+
+	exit 1
+fi
 #az snapshot create -n nome -g rg --sku Standard_LRS --source
 #storageProfile.[osDisk.[name,managedDisk.[id]],dataDisks[*].[name,managedDisk.[id]]]
 #export STRING_OSDISK=storageProfile.osDisk.[name,managedDisk.id]
 #export STRING_DATADISK=storageProfile.dataDisks[*].[name,managedDisk.id]
-export STRING_OSDISK=storageProfile.osDisk.managedDisk.id
-export STRING_DATADISK=storageProfile.dataDisks[*].managedDisk.id
-export SUFIX=$(date +"%Y%m%d%H%M%S")
-#Resource Group
-export RG=
-export VMNAME=
-export NEWVMNAME=
-#Availability Set, Para não usar comente ou deixe em branco a variável
-export AVSET=
+
+
 function TEMPFILE() {
 	case $1 in
 	criar)
@@ -172,40 +212,12 @@ function STOPVM() {
 	rc=$? 2>/dev/null
 	if [ $rc -ne 0 ]
 	then
-		EXITNOW "could not stop vm $2"
+		EXITNOW "could not deallocate vm $2"
 	else
 		BANNER sucesso "Virtual Machine STOP successful"
 	fi
 }
-function BANNER() {
-  case $1 in
-    titulo)
-        echo -e "\e[45m"
-        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
-        echo -en "\e[0m"
-        ;;
-    conteudo)
-        echo -e "\e[44m"
-        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
-        echo -en "\e[0m"
-        ;;
-    sucesso)
-        echo -e "\e[42m"
-        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
-      	echo -en "\e[0m"
-        ;;
-    erro)
-        echo -e "\e[41m"
-        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
-        echo -en "\e[0m"
-				exit 1
-        ;;
-    *)
-        EXITNOW
-        ;;
-  esac
 
-}
 function EXITNOW() {
   BANNER erro "$1"
   exit 1
@@ -232,6 +244,7 @@ then
 fi
 # echo $REGION
 # exit 1
+BANNER titulo "Clonning $VMNAME from $RG to a new VM, $NEWVMNAME in the same resource group."
 #Create OS Disk
 OSDISK=$(TEMPFILE criar)
 LISTDISK $STRING_OSDISK  $OSDISK
