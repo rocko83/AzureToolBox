@@ -1,12 +1,12 @@
-#!/bin/bash 
-export RESOURCEGROUP="rgname"
-export CLUSTERNAME="clustername"
-export SUBNETID="xxxxxxx"
-export SERVICEPRINCIPALID="xxxxxxx"
-export SERVICEPRINCIPALSECRET="xxxxxxx"
-export TAGS="billing=it"
-export VNETNAME="vnnetname"
-export SUBNETNAME="subnetname"
+#!/bin/bash
+export RESOURCEGROUP=""
+export CLUSTERNAME=""
+export SUBNETID=""
+export SERVICEPRINCIPALID=""
+export SERVICEPRINCIPALSECRET=""
+export TAGS=""
+export VNETNAME=""
+export SUBNETNAME=""
 
 
 function UPGRADE_NODEPOOL() {
@@ -38,7 +38,19 @@ function CREATE_AKS() {
     --node-count 3
     # --network-policy calico
 }
-
+function TEMPFILE() {
+	case $1 in
+	criar)
+		mktemp -p /tmp --suffix azure
+		;;
+	apagar)
+		rm  -f $2
+		;;
+	*)
+		EXITNOW "could not create temporary file"
+		;;
+	esac
+}
 function CREATE_NOODEPOOL() {
   az aks nodepool add \
     --resource-group $RESOURCEGROUP \
@@ -79,19 +91,84 @@ function CRASH {
   echo $1
   exit 1
 }
-function VALIDATE() {
+function EXITNOW() {
+  BANNER erro "$1"
+  exit 1
+}
+function BANNER() {
+  case $1 in
+    titulo)
+        echo -e "\e[45m"
+        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
+        echo -en "\e[0m"
+        ;;
+    conteudo)
+        echo -e "\e[44m"
+        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
+        echo -en "\e[0m"
+        ;;
+    sucesso)
+        echo -e "\e[42m"
+        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
+      	echo -en "\e[0m"
+        ;;
+    erro)
+        echo -e "\e[41m"
+        echo $(date +"%Y-%m-%d_%H-%M_%S")\;$2
+        echo -en "\e[0m"
+				exit 1
+        ;;
+    *)
+        EXITNOW
+        ;;
+  esac
+
+}
+function VALIDADE() {
+  if [ "$RESOURCEGROUP" == "" ]
+  then
+    EXITNOW "Variable RESOURCEGROUP is empty"
+  fi
+  if [ "$CLUSTERNAME" == "" ]
+  then
+    EXITNOW "Variable CLUSTERNAME is empty"
+  fi
+  if [ "$SUBNETID" == "" ]
+  then
+    EXITNOW "Variable SUBNETID is empty"
+  fi
+  if [ "$SERVICEPRINCIPALID" == "" ]
+  then
+    EXITNOW "Variable SERVICEPRINCIPALID is empty"
+  fi
+  if [ "$SERVICEPRINCIPALSECRET" == "" ]
+  then
+    EXITNOW "Variable SERVICEPRINCIPALSECRET is empty"
+  fi
+  if [ "$TAGS" == "" ]
+  then
+    EXITNOW "Variable TAGS is empty"
+  fi
+  if [ "$VNETNAME" == "" ]
+  then
+    EXITNOW "Variable VNETNAME is empty"
+  fi
+  if [ "$SUBNETNAME" == "" ]
+  then
+    EXITNOW "Variable SUBNETNAME is empty"
+  fi
   #Test if resooure group exist
   az group show --name $RESOURCEGROUP 2>&1 > /dev/null
   RETURN=$?
   if [ $RETURN -ne 0 ]
   then
-    CRASH "Resource group do not exist"
+    EXITNOW "Resource group do not exist"
   fi
   az aks show  --name $CLUSTERNAME --resource-group $RESOURCEGROUP 2>&1 > /dev/null
   RETURN=$?
   if [ $RETURN -eq 0 ]
   then
-    CRASH "Cluster AKS already exist"
+    EXITNOW "Cluster AKS already exist"
   fi
   # az network vnet list --query "[?name=='$VNETNAME'].[resourceGroup]" -o tsv
   export VNETRG=$(az network vnet list --query "[?name=='$VNETNAME'].[resourceGroup]" -o tsv)
@@ -99,16 +176,16 @@ function VALIDATE() {
   RETURN=$?
   if [ $RETURN -ne 0 ]
   then
-    CRASH "VNET does not exist"
+    EXITNOW "VNET does not exist"
   fi
   az network vnet subnet show --vnet-name $VNETNAME --resource-group $VNETRG --name $SUBNETNAME 2>&1 > /dev/null
   RETURN=$?
   if [ $RETURN -ne 0 ]
   then
-    CRASH "SUBNET does not exist"
+    EXITNOW "SUBNET does not exist"
   fi
 }
-VALIDATE
+VALIDADE
 ADD_AZURE_EXTENSIONS
 CREATE_AKS Standard_B4ms
 CREATE_NOODEPOOL small Standard_B4ms
